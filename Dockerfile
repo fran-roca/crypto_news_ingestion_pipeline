@@ -28,7 +28,7 @@ RUN poetry install --no-root --only main
 COPY . .
 
 # Set executable permissions for health check
-RUN chmod +x /app/src/config/health_check.py
+RUN chmod +x /app/src/monitoring/health_check.py
 
 # Health check command with the correct path
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 CMD poetry run python /app/src/config/health_check.py || exit 1

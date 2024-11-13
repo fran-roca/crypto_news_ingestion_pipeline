@@ -8,11 +8,11 @@ with patch('src.config.settings.Settings') as MockSettings:
         KAFKA_BOOTSTRAP_SERVERS='localhost:9092',
         KAFKA_TOPIC='test_topic'
     )
-    from src.config.health_check import check_health
+    from src.monitoring.health_check import check_health
 
 class TestHealthCheck(unittest.TestCase):
 
-    @patch('src.config.health_check.KafkaProducerSingleton')
+    @patch('src.monitoring.health_check.KafkaProducerSingleton')
     def test_check_health_success(self, mock_kafka_producer):
         """
         Test that check_health returns 200 when Kafka connection is successful.
@@ -28,7 +28,7 @@ class TestHealthCheck(unittest.TestCase):
         # Assert the status code is 200, indicating success
         self.assertEqual(status_code, 200)
 
-    @patch('src.config.health_check.KafkaProducerSingleton')
+    @patch('src.monitoring.health_check.KafkaProducerSingleton')
     def test_check_health_failure(self, mock_kafka_producer):
         """
         Test that check_health returns 503 when Kafka connection fails.

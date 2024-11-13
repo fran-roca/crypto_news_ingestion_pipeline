@@ -1,7 +1,7 @@
 import requests
 import time
 import logging
-from .constants import API_URL, QUERIES, MAX_CREDITS, REQUEST_INTERVAL, RATE_LIMIT_PAUSE
+from .constants import API_URL, MAX_CREDITS, RATE_LIMIT_PAUSE
 
 class NewsDataFetcher:
     def __init__(self, api_key):

@@ -1,6 +1,9 @@
+from datetime import datetime
 import logging
 import time
 from apscheduler.schedulers.background import BackgroundScheduler
+
+from src.news_fetcher.constants import QUERIES, UNAVAILABLE_ARTICLE_VALUES
 from src.news_fetcher.news_data_fetcher import NewsDataFetcher
 from src.kafka_producer.producer import KafkaProducerSingleton
 from src.config.settings import get_settings
@@ -26,22 +29,19 @@ def fetch_and_publish_news():
         logging.info("KafkaProducerSingleton initialized.")
 
         # Fetch news articles
-        articles = fetcher.fetch_all_news()
-        logging.info(f"Fetched {len(articles)} articles.")
+        pages = fetcher.fetch_news(QUERIES)
+        logging.info(f"Fetched {len(pages)} pages.")
 
         # Publish each article to Kafka
-        for article in articles:
-            message = {
-                'title': article.get('title'),
-                'description': article.get('description'),
-                'url': article.get('url'),
-                'publishedAt': article.get('publishedAt')
-            }
-            try:
-                producer.send_message(message)
-                logging.debug(f"Message sent to Kafka: {message['title']}")
-            except Exception as e:
-                logging.error(f"Error sending message to Kafka: {e}")
+        for articles in pages:
+            for article in articles:
+                message = {key: value for key, value in article.items() if value not in UNAVAILABLE_ARTICLE_VALUES}
+
+                try:
+                    producer.send_message(message)
+                    logging.debug(f"Message sent to Kafka: {message['title']}")
+                except Exception as e:
+                    logging.error(f"Error sending message to Kafka: {e}")
 
         logging.info("News fetched and published to Kafka successfully.")
     except Exception as e:
@@ -53,7 +53,7 @@ def main():
 
     # Initialize and start scheduler
     scheduler = BackgroundScheduler()
-    scheduler.add_job(fetch_and_publish_news, 'interval', minutes=15)
+    scheduler.add_job(fetch_and_publish_news, 'interval', minutes=15, next_run_time=datetime.now())
     scheduler.start()
     logging.info("Scheduler started. Job scheduled to run every 15 minutes.")
 

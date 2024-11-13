@@ -25,8 +25,8 @@ class TestMain(unittest.TestCase):
 
         # Configure NewsDataFetcher mock
         mock_fetcher_instance = MagicMock()
-        mock_fetcher_instance.fetch_all_news.return_value = [
-            {'title': 'News Title', 'description': 'News Desc', 'url': 'http://news.url', 'publishedAt': '2023-01-01'}
+        mock_fetcher_instance.fetch_news.return_value = [[
+            {'title': 'News Title', 'description': 'News Desc', 'url': 'http://news.url', 'publishedAt': '2023-01-01'}]
         ]
         mock_news_fetcher.return_value = mock_fetcher_instance
 
