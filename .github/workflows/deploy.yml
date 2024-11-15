@@ -42,16 +42,17 @@ jobs:
 
     - name: Deploy to EC2
       uses: appleboy/ssh-action@v0.1.5
+      env:
+        NEWS_API_KEY: ${{ secrets.NEWS_API_KEY }}
+        KAFKA_BOOTSTRAP_SERVERS: ${{ secrets.KAFKA_BOOTSTRAP_SERVERS }}
+        AWS_REGION: ${{ secrets.AWS_REGION }}
+        IMAGE_NAME: ${{ steps.build-image.outputs.image }}
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
       with:
         host: ${{ secrets.EC2_HOST }}
         username: ${{ secrets.EC2_USERNAME }}
         key: ${{ secrets.EC2_SSH_KEY }}
-        envs:
-          NEWS_API_KEY: ${{ secrets.NEWS_API_KEY }}
-          KAFKA_BOOTSTRAP_SERVERS: ${{ secrets.KAFKA_BOOTSTRAP_SERVERS }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
-          IMAGE_NAME: ${{ steps.build-image.outputs.image }}
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        envs: NEWS_API_KEY,KAFKA_BOOTSTRAP_SERVERS,AWS_REGION,IMAGE_NAME,ECR_REGISTRY
         script: |
           # Login to Amazon ECR
           aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REGISTRY}
@@ -68,7 +69,7 @@ jobs:
             --name financial-news-python-producer \
             --network kafka_financial_news_network \
             -e NEWS_API_KEY="${NEWS_API_KEY}" \
-            -e KAFKA_BOOTSTRAP_SERVERS="${NEWS_API_KEY}" \
+            -e KAFKA_BOOTSTRAP_SERVERS="${KAFKA_BOOTSTRAP_SERVERS}" \
             -e KAFKA_TOPIC="news_topic" \
             -e LOG_TO_FILE="True" \
             ${IMAGE_NAME}
