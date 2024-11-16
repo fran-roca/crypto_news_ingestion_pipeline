@@ -31,7 +31,7 @@ COPY . .
 RUN chmod +x /app/src/monitoring/health_check.py
 
 # Health check command with the correct path
-HEALTHCHECK --interval=30s --timeout=10s --retries=3 CMD poetry run python /app/src/config/health_check.py || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --retries=3 CMD poetry run python /app/src/monitoring/health_check.py || exit 1
 
 # Run the main application
 CMD ["poetry", "run", "python", "-m", "main"]
