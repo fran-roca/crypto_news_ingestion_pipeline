@@ -34,18 +34,29 @@ def fetch_and_publish_news():
 
         # Publish each article to Kafka
         for articles in pages:
-            for article in articles:
-                message = {key: value for key, value in article.items() if value not in UNAVAILABLE_ARTICLE_VALUES}
+            # Check if the current element (articles) is a valid list of articles
+            if _is_valid_article_list(articles):
+                for article in articles:
+                    # Create a message by filtering out unavailable values
+                    message = {key: value for key, value in article.items() if value not in UNAVAILABLE_ARTICLE_VALUES}
 
-                try:
-                    producer.send_message(message)
-                    logging.debug(f"Message sent to Kafka: {message['title']}")
-                except Exception as e:
-                    logging.error(f"Error sending message to Kafka: {e}")
+                    try:
+                        producer.send_message(message)
+                        logging.debug(f"Message sent to Kafka: {message['title']}")
+                    except Exception as e:
+                        logging.error(f"Error sending message to Kafka: {e}")
 
         logging.info("News fetched and published to Kafka successfully.")
     except Exception as e:
         logging.error(f"Error in news fetcher service: {e}")
+
+# Helper function to validate the structure of the articles list
+def _is_valid_article_list(data):
+    """
+    Validates if the input data is a list of articles.
+    Each article must be a dictionary containing at least the key 'article_id'.
+    """
+    return isinstance(data, list) and all(isinstance(article, dict) and 'article_id' in article for article in data)
 
 
 def main():
