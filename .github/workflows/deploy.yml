@@ -50,27 +50,32 @@ jobs:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         INSTANCE_ID: ${{ secrets.EC2_INSTANCE_ID }}
       run: |
-        # Create deployment command
-        DEPLOY_COMMAND="
-        export AWS_DEFAULT_REGION=${AWS_REGION};
-        aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REGISTRY};
-        docker pull ${IMAGE_NAME};
-        docker stop financial-news-python-producer || true;
-        docker rm financial-news-python-producer || true;
+        # Escape the command properly for JSON
+        DEPLOY_COMMAND=$(cat << 'EOF'
+        export AWS_DEFAULT_REGION=${AWS_REGION} && \
+        aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REGISTRY} && \
+        docker pull ${IMAGE_NAME} && \
+        docker stop financial-news-python-producer || true && \
+        docker rm financial-news-python-producer || true && \
         docker run -d \
           --name financial-news-python-producer \
           --network kafka_financial_news_network \
-          -e NEWS_API_KEY='${NEWS_API_KEY}' \
-          -e KAFKA_BOOTSTRAP_SERVERS='${KAFKA_BOOTSTRAP_SERVERS}' \
-          -e KAFKA_TOPIC='news_topic' \
-          -e LOG_TO_FILE='True' \
+          -e NEWS_API_KEY="${NEWS_API_KEY}" \
+          -e KAFKA_BOOTSTRAP_SERVERS="${KAFKA_BOOTSTRAP_SERVERS}" \
+          -e KAFKA_TOPIC="news_topic" \
+          -e LOG_TO_FILE="True" \
           ${IMAGE_NAME}
-        "
-        
-        # Execute command through SSM
+        EOF
+        )
+
+        # Send command through SSM with proper JSON formatting
         aws ssm send-command \
-          --instance-ids "${INSTANCE_ID}" \
+          --instance-ids "$INSTANCE_ID" \
           --document-name "AWS-RunShellScript" \
-          --parameters commands="[$DEPLOY_COMMAND]" \
-          --comment "Deploy via GitHub Actions" \
+          --parameters "{\"commands\":[\"$DEPLOY_COMMAND\"]}" \
           --output text
+
+        # Wait for command to complete and check status
+        sleep 10
+        COMMAND_ID=$(aws ssm list-commands --filters "Key=Status,Value=Pending" | jq -r '.Commands[0].CommandId')
+        aws ssm get-command-invocation --command-id "$COMMAND_ID" --instance-id "$INSTANCE_ID"
