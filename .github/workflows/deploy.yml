@@ -50,6 +50,9 @@ jobs:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         INSTANCE_ID: ${{ secrets.EC2_INSTANCE_ID }}
       run: |
+        # Allow the script to continue even if commands fail
+        set +e
+
         # Build the command
         DEPLOY_COMMAND=$(cat << 'EOF'
         export AWS_DEFAULT_REGION=${AWS_REGION}
@@ -81,8 +84,8 @@ jobs:
 
         echo "Command sent. Command ID: $COMMAND_ID"
 
-        # Wait for the command to complete
-        aws ssm wait command-executed --command-id "$COMMAND_ID" --instance-id "$INSTANCE_ID"
+        # Wait for the command to complete (ignore errors)
+        aws ssm wait command-executed --command-id "$COMMAND_ID" --instance-id "$INSTANCE_ID" || true
 
         # Get the command invocation result
         aws ssm get-command-invocation \
@@ -93,7 +96,7 @@ jobs:
         echo "Command execution details:"
         cat command_output.json
 
-        # Optionally, you can extract the standard output and error
+        # Extract the standard output and error
         STDOUT=$(jq -r '.StandardOutputContent' command_output.json)
         STDERR=$(jq -r '.StandardErrorContent' command_output.json)
 
@@ -102,3 +105,10 @@ jobs:
 
         echo "Standard Error:"
         echo "$STDERR"
+
+        # Optionally, exit with an error if the command failed
+        STATUS=$(jq -r '.Status' command_output.json)
+        if [ "$STATUS" != "Success" ]; then
+          echo "SSM command failed with status: $STATUS"
+          exit 1
+        fi
